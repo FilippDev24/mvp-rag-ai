@@ -112,7 +112,7 @@ services:
       dockerfile: Dockerfile
     container_name: kb_frontend_prod
     environment:
-      - VITE_API_URL=http://localhost:3001/api
+      - VITE_API_URL=${VITE_API_URL}
       - NODE_ENV=production
     ports:
       - "3000:3000"
