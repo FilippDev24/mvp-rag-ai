@@ -146,6 +146,20 @@ worker/*.pyc
 worker/venv/
 worker/.env
 
+# ML Services virtual environments (created by start_ml_services.sh)
+venv_embedding/
+venv_reranker/
+
+# ML Models cache (HuggingFace cache)
+.cache/
+*/.cache/
+**/.cache/
+
+# PyTorch models cache
+.torch/
+*/.torch/
+**/.torch/
+
 # Database
 *.db
 *.sqlite
