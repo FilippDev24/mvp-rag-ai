@@ -1,0 +1,20 @@
+# Requirements для локального сервера реранжирования
+# Запускается НА ХОСТЕ (не в Docker) для максимальной производительности на Apple Silicon
+
+# FastAPI и сервер
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# ML модели и PyTorch для Apple Silicon
+torch==2.1.1
+sentence-transformers==2.2.2
+
+# Научные библиотеки
+numpy==1.24.3
+
+# HTTP клиент для тестирования
+requests==2.31.0
+
+# Логирование
+structlog==23.2.0

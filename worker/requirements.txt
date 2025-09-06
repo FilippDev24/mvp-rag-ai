@@ -1,0 +1,63 @@
+# Core dependencies
+celery==5.3.4
+redis==5.0.1
+
+# Document processing
+PyPDF2==3.0.1
+python-docx==1.1.0
+python-pptx==0.6.23
+openpyxl==3.1.2
+
+# Text processing (ОПТИМИЗИРОВАНО: тяжелые ML-модели вынесены на хост)
+numpy==1.24.4
+
+# Keyword extraction (легкие модели, остаются в Docker)
+keybert==0.7.0
+sentence-transformers==2.2.2
+huggingface_hub==0.19.4
+
+# НОВЫЕ ЗАВИСИМОСТИ согласно ТЗ (БЕЗ ТЯЖЕЛЫХ ML-моделей)
+rank-bm25==0.2.2
+pymorphy3==1.2.1
+pymorphy3-dicts-ru==2.4.417150.4580142
+
+# Vector database (только клиент)
+chromadb==1.0.16
+
+# HTTP requests (для обращения к локальным ML-сервисам)
+requests==2.31.0
+httpx==0.27.0
+
+# Flask API
+flask==3.0.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Logging
+structlog==23.2.0
+
+# Data validation
+pydantic==2.5.2
+
+# File handling
+pathlib2==2.3.7.post1
+
+# Database
+psycopg2-binary==2.9.9
+
+# System monitoring
+psutil==5.9.6
+
+# Development dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# УДАЛЕНЫ ДЛЯ ОПТИМИЗАЦИИ (теперь используются внешние сервисы):
+# - keybert (тяжелая ML-модель)
+# - sentence-transformers (вынесена в local_embedding_server)
+# - transformers (вынесена в local_embedding_server)
+# - torch (вынесен в локальные сервисы)

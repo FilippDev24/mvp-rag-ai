@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  fullName     String?       @map("full_name")
+  accessLevel  Int           @default(10) @map("access_level")
+  role         Role          @default(USER)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  chatSessions ChatSession[]
+  documents    Document[]
+
+  @@index([accessLevel])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Document {
+  id          String         @id @default(uuid())
+  title       String
+  filePath    String?        @map("file_path")
+  fileType    String?        @map("file_type")
+  accessLevel Int            @default(50) @map("access_level")
+  uploadedBy  String         @map("uploaded_by")
+  processed   Boolean        @default(false)
+  chunkCount  Int            @default(0) @map("chunk_count")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  metadata    Json?
+  processedAt DateTime?      @map("processed_at")
+  status      DocumentStatus @default(PENDING)
+  chunks      Chunk[]
+  user        User           @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([accessLevel])
+  @@index([uploadedBy])
+  @@index([createdAt])
+  @@index([status])
+  @@map("documents")
+}
+
+model Chunk {
+  id          String   @id @default(uuid())
+  documentId  String   @map("document_id")
+  chunkIndex  Int      @map("chunk_index")
+  content     String
+  accessLevel Int      @map("access_level")
+  charCount   Int      @map("char_count")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([accessLevel])
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("chunks")
+}
+
+model ChatSession {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  title     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chat_sessions")
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  sessionId String      @map("session_id")
+  role      MessageRole
+  content   String
+  metadata  Json?
+  createdAt DateTime    @default(now()) @map("created_at")
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+enum Role {
+  ADMIN @map("admin")
+  USER  @map("user")
+}
+
+enum MessageRole {
+  USER      @map("user")
+  ASSISTANT @map("assistant")
+  SYSTEM    @map("system")
+}
+
+enum DocumentStatus {
+  PENDING    @map("pending")
+  PROCESSING @map("processing")
+  COMPLETED  @map("completed")
+  ERROR      @map("error")
+}

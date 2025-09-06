@@ -1,0 +1,157 @@
+{
+  "total_pipeline_time_ms": 19423.08521270752,
+  "measurements_count": 7,
+  "slowest_operations": [
+    {
+      "operation": "reranking",
+      "duration_ms": 18944.86355781555,
+      "start_memory_mb": 3439.734375,
+      "end_memory_mb": 4636.05078125,
+      "memory_delta_mb": 1196.31640625,
+      "timestamp": 1757005307.9550211,
+      "details": {
+        "documents_count": 31,
+        "rerank_top_k": 10,
+        "model": "BAAI/bge-reranker-v2-m3"
+      }
+    },
+    {
+      "operation": "query_embedding_generation",
+      "duration_ms": 418.78247261047363,
+      "start_memory_mb": 3413.921875,
+      "end_memory_mb": 3439.08984375,
+      "memory_delta_mb": 25.16796875,
+      "timestamp": 1757005307.476429,
+      "details": {
+        "query_length": 48,
+        "model": "multilingual-e5-large-instruct"
+      }
+    },
+    {
+      "operation": "bm25_initialization",
+      "duration_ms": 45.70579528808594,
+      "start_memory_mb": 3439.33984375,
+      "end_memory_mb": 3439.734375,
+      "memory_delta_mb": 0.39453125,
+      "timestamp": 1757005307.9082398,
+      "details": {
+        "access_level": 50,
+        "documents_count": 30
+      }
+    },
+    {
+      "operation": "chromadb_vector_search",
+      "duration_ms": 12.790441513061523,
+      "start_memory_mb": 3439.08984375,
+      "end_memory_mb": 3439.33984375,
+      "memory_delta_mb": 0.25,
+      "timestamp": 1757005307.8953946,
+      "details": {
+        "access_level": 50,
+        "top_k": 30
+      }
+    },
+    {
+      "operation": "bm25_search",
+      "duration_ms": 0.74005126953125,
+      "start_memory_mb": 3439.734375,
+      "end_memory_mb": 3439.734375,
+      "memory_delta_mb": 0.0,
+      "timestamp": 1757005307.9540844,
+      "details": {
+        "query_length": 48,
+        "top_k": 30
+      }
+    }
+  ],
+  "all_measurements": [
+    {
+      "operation": "reranking",
+      "duration_ms": 18944.86355781555,
+      "start_memory_mb": 3439.734375,
+      "end_memory_mb": 4636.05078125,
+      "memory_delta_mb": 1196.31640625,
+      "timestamp": 1757005307.9550211,
+      "details": {
+        "documents_count": 31,
+        "rerank_top_k": 10,
+        "model": "BAAI/bge-reranker-v2-m3"
+      }
+    },
+    {
+      "operation": "query_embedding_generation",
+      "duration_ms": 418.78247261047363,
+      "start_memory_mb": 3413.921875,
+      "end_memory_mb": 3439.08984375,
+      "memory_delta_mb": 25.16796875,
+      "timestamp": 1757005307.476429,
+      "details": {
+        "query_length": 48,
+        "model": "multilingual-e5-large-instruct"
+      }
+    },
+    {
+      "operation": "bm25_initialization",
+      "duration_ms": 45.70579528808594,
+      "start_memory_mb": 3439.33984375,
+      "end_memory_mb": 3439.734375,
+      "memory_delta_mb": 0.39453125,
+      "timestamp": 1757005307.9082398,
+      "details": {
+        "access_level": 50,
+        "documents_count": 30
+      }
+    },
+    {
+      "operation": "chromadb_vector_search",
+      "duration_ms": 12.790441513061523,
+      "start_memory_mb": 3439.08984375,
+      "end_memory_mb": 3439.33984375,
+      "memory_delta_mb": 0.25,
+      "timestamp": 1757005307.8953946,
+      "details": {
+        "access_level": 50,
+        "top_k": 30
+      }
+    },
+    {
+      "operation": "bm25_search",
+      "duration_ms": 0.74005126953125,
+      "start_memory_mb": 3439.734375,
+      "end_memory_mb": 3439.734375,
+      "memory_delta_mb": 0.0,
+      "timestamp": 1757005307.9540844,
+      "details": {
+        "query_length": 48,
+        "top_k": 30
+      }
+    },
+    {
+      "operation": "rrf_fusion",
+      "duration_ms": 0.11968612670898438,
+      "start_memory_mb": 3439.734375,
+      "end_memory_mb": 3439.734375,
+      "memory_delta_mb": 0.0,
+      "timestamp": 1757005307.9548638,
+      "details": {
+        "vector_results": 30,
+        "bm25_results": 30
+      }
+    },
+    {
+      "operation": "context_formation",
+      "duration_ms": 0.08320808410644531,
+      "start_memory_mb": 4636.05078125,
+      "end_memory_mb": 4636.05078125,
+      "memory_delta_mb": 0.0,
+      "timestamp": 1757005326.900388,
+      "details": {
+        "final_results": 1
+      }
+    }
+  ],
+  "memory_usage": {
+    "peak_memory_mb": 4636.05078125,
+    "total_memory_delta_mb": 1222.12890625
+  }
+}

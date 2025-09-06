@@ -1,0 +1,161 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: kb_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: knowledge_base
+    ports:
+      - "8010:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d knowledge_base"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Celery
+  redis:
+    image: redis:7-alpine
+    container_name: kb_redis
+    ports:
+      - "8011:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: kb_chromadb
+    ports:
+      - "8012:8000"
+    volumes:
+      - chromadb_data:/data
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/data
+    restart: unless-stopped
+
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kb_backend
+    ports:
+      - "8014:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://admin:password@postgres:5432/knowledge_base
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - JWT_SECRET=your-secret-key-min-32-chars-long-for-security
+      - JWT_EXPIRY=7d
+      - FRONTEND_URL=http://localhost:8015
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - YANDEX_CLIENT_ID=c1ce963c109749f09eb51d323c0b134b
+      - YANDEX_CLIENT_SECRET=baaa016b8dbb4741af858848623a6715
+      - YANDEX_REDIRECT_URI=http://localhost:3001/api/calendar/oauth/callback
+      - SYSTEM_CALENDAR_EMAIL=
+      - SYSTEM_CALENDAR_ACCESS_TOKEN=
+      - SYSTEM_CALENDAR_REFRESH_TOKEN=
+      - CALDAV_EMAIL=dev@mass-project.dev
+      - CALDAV_PASSWORD=dysyuldwcdvfezoo
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/uploads:/app/uploads
+    command: npm run dev
+    restart: unless-stopped
+
+  # Celery Worker (ОПТИМИЗИРОВАНО: без ML-моделей)
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    container_name: kb_worker
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=postgresql://admin:password@postgres:5432/knowledge_base
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      # НОВЫЕ переменные для локальных ML-сервисов
+      - LOCAL_EMBEDDING_URL=http://host.docker.internal:8003
+      - LOCAL_RERANKER_URL=http://host.docker.internal:8002
+      # Удалены ML-специфичные переменные (теперь не нужны)
+      # - EMBEDDING_MODEL (используется в локальном сервисе)
+      # - OMP_NUM_THREADS (не нужно без PyTorch)
+      # - TORCH_NUM_THREADS (не нужно без PyTorch)
+      # - PYTORCH_ENABLE_MPS_FALLBACK (не нужно без PyTorch)
+    depends_on:
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+      backend:
+        condition: service_started
+    volumes:
+      - ./worker:/app
+      - worker_pip_cache:/root/.cache/pip
+      # Удален worker_huggingface_cache (не нужен без ML-моделей)
+      - ./backend/uploads:/app/uploads
+    command: celery -A celery_app worker --loglevel=info -Q celery,document_processing,queries,embeddings
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    image: node:18-alpine
+    container_name: kb_frontend
+    working_dir: /app
+    ports:
+      - "8015:3011"
+    environment:
+      - VITE_API_URL=http://localhost:8014/api
+      - VITE_PORT=3011
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3011"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  chromadb_data:
+  ollama_data:
+  uploads_data:
+  backend_node_modules:
+  frontend_node_modules:
+  worker_pip_cache:
+  # worker_huggingface_cache удален - больше не нужен без ML-моделей в Docker
+
+networks:
+  default:
+    name: knowledge_base_network

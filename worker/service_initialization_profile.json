@@ -1,0 +1,144 @@
+{
+  "total_pipeline_time_ms": 9113.32392692566,
+  "measurements_count": 7,
+  "slowest_operations": [
+    {
+      "operation": "embedding_service_init",
+      "duration_ms": 6491.6672706604,
+      "start_memory_mb": 422.390625,
+      "end_memory_mb": 3144.28125,
+      "memory_delta_mb": 2721.890625,
+      "timestamp": 1757005389.4945068,
+      "details": {
+        "service": "EmbeddingService"
+      }
+    },
+    {
+      "operation": "imports",
+      "duration_ms": 2498.0571269989014,
+      "start_memory_mb": 13.23828125,
+      "end_memory_mb": 422.390625,
+      "memory_delta_mb": 409.15234375,
+      "timestamp": 1757005386.9962285,
+      "details": {
+        "type": "module_imports"
+      }
+    },
+    {
+      "operation": "search_service_init",
+      "duration_ms": 59.37337875366211,
+      "start_memory_mb": 3145.109375,
+      "end_memory_mb": 3156.609375,
+      "memory_delta_mb": 11.5,
+      "timestamp": 1757005396.050637,
+      "details": {
+        "service": "SearchService"
+      }
+    },
+    {
+      "operation": "database_service_init",
+      "duration_ms": 57.94978141784668,
+      "start_memory_mb": 3144.28125,
+      "end_memory_mb": 3144.984375,
+      "memory_delta_mb": 0.703125,
+      "timestamp": 1757005395.9862878,
+      "details": {
+        "service": "DatabaseService"
+      }
+    },
+    {
+      "operation": "reranking_service_init",
+      "duration_ms": 6.108760833740234,
+      "start_memory_mb": 3144.984375,
+      "end_memory_mb": 3145.109375,
+      "memory_delta_mb": 0.125,
+      "timestamp": 1757005396.0442905,
+      "details": {
+        "service": "LocalRerankingService"
+      }
+    }
+  ],
+  "all_measurements": [
+    {
+      "operation": "embedding_service_init",
+      "duration_ms": 6491.6672706604,
+      "start_memory_mb": 422.390625,
+      "end_memory_mb": 3144.28125,
+      "memory_delta_mb": 2721.890625,
+      "timestamp": 1757005389.4945068,
+      "details": {
+        "service": "EmbeddingService"
+      }
+    },
+    {
+      "operation": "imports",
+      "duration_ms": 2498.0571269989014,
+      "start_memory_mb": 13.23828125,
+      "end_memory_mb": 422.390625,
+      "memory_delta_mb": 409.15234375,
+      "timestamp": 1757005386.9962285,
+      "details": {
+        "type": "module_imports"
+      }
+    },
+    {
+      "operation": "search_service_init",
+      "duration_ms": 59.37337875366211,
+      "start_memory_mb": 3145.109375,
+      "end_memory_mb": 3156.609375,
+      "memory_delta_mb": 11.5,
+      "timestamp": 1757005396.050637,
+      "details": {
+        "service": "SearchService"
+      }
+    },
+    {
+      "operation": "database_service_init",
+      "duration_ms": 57.94978141784668,
+      "start_memory_mb": 3144.28125,
+      "end_memory_mb": 3144.984375,
+      "memory_delta_mb": 0.703125,
+      "timestamp": 1757005395.9862878,
+      "details": {
+        "service": "DatabaseService"
+      }
+    },
+    {
+      "operation": "reranking_service_init",
+      "duration_ms": 6.108760833740234,
+      "start_memory_mb": 3144.984375,
+      "end_memory_mb": 3145.109375,
+      "memory_delta_mb": 0.125,
+      "timestamp": 1757005396.0442905,
+      "details": {
+        "service": "LocalRerankingService"
+      }
+    },
+    {
+      "operation": "keyword_service_init",
+      "duration_ms": 0.11873245239257812,
+      "start_memory_mb": 3145.109375,
+      "end_memory_mb": 3145.109375,
+      "memory_delta_mb": 0.0,
+      "timestamp": 1757005396.0504627,
+      "details": {
+        "service": "KeywordService"
+      }
+    },
+    {
+      "operation": "chunking_service_init",
+      "duration_ms": 0.04887580871582031,
+      "start_memory_mb": 422.390625,
+      "end_memory_mb": 422.390625,
+      "memory_delta_mb": 0.0,
+      "timestamp": 1757005389.4944012,
+      "details": {
+        "service": "SemanticChunkingService"
+      }
+    }
+  ],
+  "memory_usage": {
+    "peak_memory_mb": 3156.609375,
+    "total_memory_delta_mb": 3143.37109375
+  }
+}
