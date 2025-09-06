@@ -64,6 +64,7 @@ services:
       - LLM_API_TYPE=vllm
       - LLM_MODEL_NAME=openai/gpt-oss-20b
       - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL}
       - PORT=3001
     ports:
       - "3001:3001"
