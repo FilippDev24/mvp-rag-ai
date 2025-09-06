@@ -1,0 +1,25 @@
+FROM gpt-oss:20b
+
+# Оптимизация для MacBook M4 Pro 14/20 с 48GB RAM
+# gpt-oss:20b - 21B параметров с 3.6B активными параметрами
+
+
+# МИНИМАЛЬНЫЙ системный промпт - основные инструкции в запросе
+SYSTEM """Ты корпоративный ИИ-ассистент. Используй только русский язык. Отвечай точно и по делу."""
+
+# Оптимизированные параметры для M4 Pro (48GB RAM) - быстрая конфигурация
+PARAMETER temperature 0.1
+PARAMETER top_p 0.95
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.15
+PARAMETER num_predict 1024
+PARAMETER num_batch 512
+PARAMETER num_thread 14
+PARAMETER num_ctx 8192
+
+# Оптимизация памяти для M4 Pro (убраны неподдерживаемые параметры)
+
+# Параметры для стабильной работы
+PARAMETER stop "<|im_start|>"
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|endoftext|>"

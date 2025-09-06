@@ -1,0 +1,19 @@
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y \
+      python3.10 python3.10-venv python3-pip git curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# PyTorch cu121 и vLLM
+RUN python3 -m pip install --upgrade pip wheel && \
+    python3 -m pip install --index-url https://download.pytorch.org/whl/cu121 \
+        torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 && \
+    python3 -m pip install vllm==0.6.6.post1
+
+EXPOSE 8000
+ENTRYPOINT ["vllm", "serve", "openai/gpt-oss-20b", "--dtype", "bfloat16", "--max-model-len", "8192", "--host", "0.0.0.0", "--port", "8000"]
