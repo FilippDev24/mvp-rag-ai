@@ -58,9 +58,9 @@ services:
       - DATABASE_URL=postgresql://kb_user:${POSTGRES_PASSWORD}@postgres:5432/knowledge_base
       - REDIS_URL=redis://redis:6379
       - CHROMADB_URL=http://chromadb:8000
-      - LOCAL_EMBEDDING_URL=http://host.docker.internal:8003
-      - LOCAL_RERANKER_URL=http://host.docker.internal:8002
-      - VLLM_HOST=http://host.docker.internal:8000  # ИЗМЕНЕНО: ваша gpt-oss-20b модель на порту 8000
+      - LOCAL_EMBEDDING_URL=http://172.17.0.1:8003  # Linux host IP
+      - LOCAL_RERANKER_URL=http://172.17.0.1:8002   # Linux host IP
+      - VLLM_HOST=http://172.17.0.1:8000            # Linux host IP для gpt-oss-20b
       - LLM_API_TYPE=vllm
       - LLM_MODEL_NAME=openai/gpt-oss-20b
       - JWT_SECRET=${JWT_SECRET}
@@ -90,9 +90,9 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - DATABASE_URL=postgresql://kb_user:${POSTGRES_PASSWORD}@postgres:5432/knowledge_base
       - CHROMADB_URL=http://chromadb:8000
-      - LOCAL_EMBEDDING_URL=http://host.docker.internal:8003
-      - LOCAL_RERANKER_URL=http://host.docker.internal:8002
-      - VLLM_HOST=http://host.docker.internal:8000  # ИЗМЕНЕНО: ваша gpt-oss-20b модель на порту 8000
+      - LOCAL_EMBEDDING_URL=http://172.17.0.1:8003  # Linux host IP
+      - LOCAL_RERANKER_URL=http://172.17.0.1:8002   # Linux host IP
+      - VLLM_HOST=http://172.17.0.1:8000            # Linux host IP для gpt-oss-20b
       - LLM_API_TYPE=vllm
       - LLM_MODEL_NAME=openai/gpt-oss-20b
       - PYTHONPATH=/app

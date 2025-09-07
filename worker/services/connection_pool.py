@@ -38,7 +38,7 @@ class ChromaDBPool:
             self.chroma_port = int(url_parts[1]) if len(url_parts) > 1 else 8000
         else:
             # Fallback на отдельные переменные
-            self.chroma_host = os.getenv('CHROMA_HOST', 'localhost')
+            self.chroma_host = os.getenv('CHROMA_HOST', 'chromadb')  # Используем имя сервиса Docker
             self.chroma_port = int(os.getenv('CHROMA_PORT', '8000'))
         
         # Пул доступных соединений
