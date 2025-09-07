@@ -78,7 +78,7 @@ export class ChatService {
     if (process.env.LLM_API_TYPE === 'vllm' || process.env.VLLM_HOST) {
       this.llmUrl = process.env.VLLM_HOST || 'http://localhost:8000';
       this.llmApiType = 'vllm';
-      this.llmModelName = process.env.LLM_MODEL_NAME || 'auto'; // Будет определено автоматически
+      this.llmModelName = process.env.LLM_MODEL_NAME || 'openai/gpt-oss-20b';
     } else {
       this.llmUrl = process.env.OLLAMA_HOST || 'http://localhost:11434';
       this.llmApiType = 'ollama';
@@ -97,60 +97,8 @@ export class ChatService {
       this.maxContextLength = 8000;
       this.maxChunksPerDocument = 3;
     }
-    
-    // Автоматически получаем имя модели для VLLM, если установлено 'auto'
-    if (this.llmApiType === 'vllm' && this.llmModelName === 'auto') {
-      this.initializeVLLMModel();
-    }
   }
 
-  /**
-   * Автоматическое получение имени модели из VLLM API
-   */
-  private async initializeVLLMModel(): Promise<void> {
-    try {
-      const response = await axios.get<{ data: Array<{ id: string }> }>(`${this.llmUrl}/v1/models`, { timeout: 5000 });
-      const models = response.data.data;
-      
-      if (models && models.length > 0) {
-        this.llmModelName = models[0].id;
-        logger.info('Auto-detected VLLM model', { modelName: this.llmModelName });
-        
-        // Обновляем адаптивные настройки после получения имени модели
-        if (this.llmModelName.includes('gpt-oss-20b')) {
-          this.maxTokens = 2048;
-          this.maxContextLength = 16000;
-          this.maxChunksPerDocument = 5;
-        }
-      } else {
-        logger.warn('No models found in VLLM API, using fallback');
-        this.llmModelName = 'openai/gpt-oss-20b';
-      }
-    } catch (error) {
-      logger.error('Failed to auto-detect VLLM model', { error });
-      this.llmModelName = 'openai/gpt-oss-20b';
-    }
-  }
-
-  /**
-   * Гарантирует, что модель инициализирована перед использованием
-   * Неблокирующая версия - если модель не готова, использует fallback
-   */
-  private async ensureModelReady(): Promise<void> {
-    if (this.llmApiType === 'vllm' && this.llmModelName === 'auto') {
-      // Неблокирующая инициализация - если не удалось, используем fallback
-      try {
-        await Promise.race([
-          this.initializeVLLMModel(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
-        ]);
-      } catch (error) {
-        logger.warn('Model initialization failed or timed out, using fallback', { error });
-        // Используем первую доступную модель из API без ожидания
-        this.llmModelName = 'openai/gpt-oss-20b'; // Простой fallback
-      }
-    }
-  }
 
   /**
    * Основной метод обработки RAG запроса согласно требованиям
@@ -1100,9 +1048,6 @@ export class ChatService {
     const startTime = Date.now();
     
     try {
-      // Гарантируем, что модель инициализирована
-      await this.ensureModelReady();
-      
       // ИСПРАВЛЕНИЕ: Используем чистый промпт без служебной разметки
       const cleanPrompt = this.buildCleanPrompt(question, context, chatHistory);
 
@@ -1226,9 +1171,6 @@ export class ChatService {
   private async streamOllamaAnswerWithMetrics(question: string, context: string, res: Response, onChunk?: (chunk: string, isFirstToken: boolean) => void, chatHistory: any[] = [], onDebug?: (debug: any) => void): Promise<string> {
     return new Promise(async (resolve, reject) => {
       try {
-        // Гарантируем, что модель инициализирована
-        await this.ensureModelReady();
-        
         // ИСПРАВЛЕНИЕ: Используем чистый промпт для streaming тоже
         const cleanPrompt = this.buildCleanPrompt(question, context, chatHistory);
         let fullAnswer = '';

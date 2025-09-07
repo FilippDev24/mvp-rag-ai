@@ -63,7 +63,7 @@ services:
       - LOCAL_RERANKER_URL=http://172.17.0.1:8002   # Linux host IP
       - VLLM_HOST=http://172.17.0.1:8000            # Linux host IP для gpt-oss-20b
       - LLM_API_TYPE=vllm
-      - LLM_MODEL_NAME=openai/gpt-oss-20b
+      - LLM_MODEL_NAME=/models/models--openai--gpt-oss-20b/snapshots/6cee5e81ee83917806bbde320786a8fb61efebee
       - JWT_SECRET=${JWT_SECRET}
       - FRONTEND_URL=${FRONTEND_URL}
       - PORT=3001
