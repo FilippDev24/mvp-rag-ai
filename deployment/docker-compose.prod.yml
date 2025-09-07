@@ -56,7 +56,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://kb_user:${POSTGRES_PASSWORD}@postgres:5432/knowledge_base
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - CHROMADB_URL=http://chromadb:8000
       - LOCAL_EMBEDDING_URL=http://172.17.0.1:8003  # Linux host IP
       - LOCAL_RERANKER_URL=http://172.17.0.1:8002   # Linux host IP
