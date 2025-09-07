@@ -1224,38 +1224,83 @@ export class ChatService {
             for (const line of lines) {
               if (line.trim()) {
                 try {
-                  const data = JSON.parse(line) as OllamaStreamResponse;
-                  
-                  if (data.response) {
-                    fullAnswer += data.response;
-                    
-                    // Очищаем chunk от chain-of-thought для отправки пользователю
-                    const cleanedChunk = this.cleanStreamingChunk(data.response);
-                    
-                    if (onChunk) {
-                      onChunk(cleanedChunk, isFirstToken);
-                      isFirstToken = false;
-                    }
-                    
-                    if (cleanedChunk) {
+                  // Обрабатываем разные форматы API
+                  if (this.llmApiType === 'vllm') {
+                    // VLLM возвращает OpenAI-совместимый формат
+                    if (line.startsWith('data: [DONE]')) {
                       this.sendSSEData(res, 'answer', {
-                        text: cleanedChunk,
-                        done: false
+                        text: '',
+                        done: true
                       });
+                      resolve(fullAnswer);
+                      return;
                     }
-                  }
+                    
+                    if (line.startsWith('data: ')) {
+                      const jsonData = line.substring(6);
+                      const data = JSON.parse(jsonData);
+                      
+                      if (data.choices && data.choices[0] && data.choices[0].text) {
+                        const chunk = data.choices[0].text;
+                        fullAnswer += chunk;
+                        
+                        const cleanedChunk = this.cleanStreamingChunk(chunk);
+                        
+                        if (onChunk) {
+                          onChunk(cleanedChunk, isFirstToken);
+                          isFirstToken = false;
+                        }
+                        
+                        if (cleanedChunk) {
+                          this.sendSSEData(res, 'answer', {
+                            text: cleanedChunk,
+                            done: false
+                          });
+                        }
+                      }
+                      
+                      if (data.choices && data.choices[0] && data.choices[0].finish_reason) {
+                        this.sendSSEData(res, 'answer', {
+                          text: '',
+                          done: true
+                        });
+                        resolve(fullAnswer);
+                        return;
+                      }
+                    }
+                  } else {
+                    // Ollama формат
+                    const data = JSON.parse(line) as OllamaStreamResponse;
+                    
+                    if (data.response) {
+                      fullAnswer += data.response;
+                      
+                      const cleanedChunk = this.cleanStreamingChunk(data.response);
+                      
+                      if (onChunk) {
+                        onChunk(cleanedChunk, isFirstToken);
+                        isFirstToken = false;
+                      }
+                      
+                      if (cleanedChunk) {
+                        this.sendSSEData(res, 'answer', {
+                          text: cleanedChunk,
+                          done: false
+                        });
+                      }
+                    }
 
-                  if (data.done) {
-                    this.sendSSEData(res, 'answer', {
-                      text: '',
-                      done: true
-                    });
-                    // НЕ закрываем SSE поток здесь - метрики отправятся позже
-                    resolve(fullAnswer);
-                    return;
+                    if (data.done) {
+                      this.sendSSEData(res, 'answer', {
+                        text: '',
+                        done: true
+                      });
+                      resolve(fullAnswer);
+                      return;
+                    }
                   }
                 } catch (parseError) {
-                  logger.warn('Failed to parse Ollama stream response', { line, parseError });
+                  logger.warn('Failed to parse stream response', { line, parseError, apiType: this.llmApiType });
                 }
               }
             }
