@@ -28,8 +28,18 @@ class ChromaDBPool:
         """
         self.max_connections = max_connections
         self.min_connections = min_connections
-        self.chroma_host = os.getenv('CHROMA_HOST', 'localhost')
-        self.chroma_port = int(os.getenv('CHROMA_PORT', '8000'))
+        
+        # Парсим CHROMADB_URL или используем отдельные переменные
+        chromadb_url = os.getenv('CHROMADB_URL', 'http://localhost:8000')
+        if chromadb_url.startswith('http://'):
+            # Парсим URL вида http://chromadb:8000
+            url_parts = chromadb_url.replace('http://', '').split(':')
+            self.chroma_host = url_parts[0]
+            self.chroma_port = int(url_parts[1]) if len(url_parts) > 1 else 8000
+        else:
+            # Fallback на отдельные переменные
+            self.chroma_host = os.getenv('CHROMA_HOST', 'localhost')
+            self.chroma_port = int(os.getenv('CHROMA_PORT', '8000'))
         
         # Пул доступных соединений
         self.available_connections = Queue(maxsize=max_connections)
