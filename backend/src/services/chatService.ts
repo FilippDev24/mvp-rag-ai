@@ -133,6 +133,15 @@ export class ChatService {
   }
 
   /**
+   * Гарантирует, что модель инициализирована перед использованием
+   */
+  private async ensureModelReady(): Promise<void> {
+    if (this.llmApiType === 'vllm' && this.llmModelName === 'auto') {
+      await this.initializeVLLMModel();
+    }
+  }
+
+  /**
    * Основной метод обработки RAG запроса согласно требованиям
    * Использует Celery worker для RAG pipeline с детальными метриками
    */
@@ -1080,6 +1089,9 @@ export class ChatService {
     const startTime = Date.now();
     
     try {
+      // Гарантируем, что модель инициализирована
+      await this.ensureModelReady();
+      
       // ИСПРАВЛЕНИЕ: Используем чистый промпт без служебной разметки
       const cleanPrompt = this.buildCleanPrompt(question, context, chatHistory);
 
@@ -1201,8 +1213,11 @@ export class ChatService {
    * Streaming генерация ответа через Ollama С КОНТЕКСТОМ ЧАТА и метриками
    */
   private async streamOllamaAnswerWithMetrics(question: string, context: string, res: Response, onChunk?: (chunk: string, isFirstToken: boolean) => void, chatHistory: any[] = [], onDebug?: (debug: any) => void): Promise<string> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
+        // Гарантируем, что модель инициализирована
+        await this.ensureModelReady();
+        
         // ИСПРАВЛЕНИЕ: Используем чистый промпт для streaming тоже
         const cleanPrompt = this.buildCleanPrompt(question, context, chatHistory);
         let fullAnswer = '';
