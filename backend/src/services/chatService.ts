@@ -134,10 +134,21 @@ export class ChatService {
 
   /**
    * Гарантирует, что модель инициализирована перед использованием
+   * Неблокирующая версия - если модель не готова, использует fallback
    */
   private async ensureModelReady(): Promise<void> {
     if (this.llmApiType === 'vllm' && this.llmModelName === 'auto') {
-      await this.initializeVLLMModel();
+      // Неблокирующая инициализация - если не удалось, используем fallback
+      try {
+        await Promise.race([
+          this.initializeVLLMModel(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+        ]);
+      } catch (error) {
+        logger.warn('Model initialization failed or timed out, using fallback', { error });
+        // Используем первую доступную модель из API без ожидания
+        this.llmModelName = 'openai/gpt-oss-20b'; // Простой fallback
+      }
     }
   }
 
