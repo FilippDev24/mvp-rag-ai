@@ -78,7 +78,7 @@ export class ChatService {
     if (process.env.LLM_API_TYPE === 'vllm' || process.env.VLLM_HOST) {
       this.llmUrl = process.env.VLLM_HOST || 'http://localhost:8000';
       this.llmApiType = 'vllm';
-      this.llmModelName = process.env.LLM_MODEL_NAME || 'openai/gpt-oss-20b';
+      this.llmModelName = process.env.LLM_MODEL_NAME || 'auto'; // Будет определено автоматически
     } else {
       this.llmUrl = process.env.OLLAMA_HOST || 'http://localhost:11434';
       this.llmApiType = 'ollama';
@@ -96,6 +96,39 @@ export class ChatService {
       this.maxTokens = 1024;
       this.maxContextLength = 8000;
       this.maxChunksPerDocument = 3;
+    }
+    
+    // Автоматически получаем имя модели для VLLM, если установлено 'auto'
+    if (this.llmApiType === 'vllm' && this.llmModelName === 'auto') {
+      this.initializeVLLMModel();
+    }
+  }
+
+  /**
+   * Автоматическое получение имени модели из VLLM API
+   */
+  private async initializeVLLMModel(): Promise<void> {
+    try {
+      const response = await axios.get<{ data: Array<{ id: string }> }>(`${this.llmUrl}/v1/models`, { timeout: 5000 });
+      const models = response.data.data;
+      
+      if (models && models.length > 0) {
+        this.llmModelName = models[0].id;
+        logger.info('Auto-detected VLLM model', { modelName: this.llmModelName });
+        
+        // Обновляем адаптивные настройки после получения имени модели
+        if (this.llmModelName.includes('gpt-oss-20b')) {
+          this.maxTokens = 2048;
+          this.maxContextLength = 16000;
+          this.maxChunksPerDocument = 5;
+        }
+      } else {
+        logger.warn('No models found in VLLM API, using fallback');
+        this.llmModelName = 'openai/gpt-oss-20b';
+      }
+    } catch (error) {
+      logger.error('Failed to auto-detect VLLM model', { error });
+      this.llmModelName = 'openai/gpt-oss-20b';
     }
   }
 
