@@ -17,15 +17,26 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Определение платформы
-PLATFORM=$(uname -s)
-ARCHITECTURE=$(uname -m)
+if command -v uname >/dev/null 2>&1; then
+    PLATFORM=$(uname -s)
+    ARCHITECTURE=$(uname -m)
+else
+    # Альтернативные способы определения платформы
+    if [ -f /etc/os-release ]; then
+        PLATFORM="Linux"
+        ARCHITECTURE="x86_64"
+    else
+        PLATFORM="Unknown"
+        ARCHITECTURE="Unknown"
+    fi
+fi
 
 echo -e "${BLUE}🖥️  Platform: $PLATFORM $ARCHITECTURE${NC}"
 
 if [[ "$PLATFORM" == "Darwin" && "$ARCHITECTURE" == "arm64" ]]; then
     echo -e "${GREEN}🍎 Detected Apple Silicon - optimizing for MPS${NC}"
     IS_APPLE_SILICON=true
-elif [[ "$PLATFORM" == "Linux" ]]; then
+elif [[ "$PLATFORM" == "Linux" ]] || [[ "$PLATFORM" == "Unknown" ]]; then
     echo -e "${GREEN}🐧 Detected Linux - optimizing for CUDA/CPU${NC}"
     IS_UBUNTU=true
 else
@@ -153,11 +164,18 @@ start_service() {
     
     echo -e "${YELLOW}🔄 Starting $service_name on port $port...${NC}"
     
+    # Создаем директорию для логов если не существует
+    mkdir -p logs
+    
+    # Полные пути к файлам
+    local full_log_path="logs/$log_file"
+    local pid_file="logs/${service_name,,}_service.pid"
+    
     # Активируем виртуальное окружение и запускаем сервис
     (
         source $venv_path/bin/activate
-        python $script_path > $log_file 2>&1 &
-        echo $! > "${service_name,,}_service.pid"
+        python $script_path > "$full_log_path" 2>&1 &
+        echo $! > "$pid_file"
     )
     
     # Ждем немного для инициализации
@@ -203,7 +221,7 @@ echo -e "============================================================${NC}"
 if [ $EMBEDDING_STARTED -eq 0 ]; then
     echo -e "${GREEN}✅ Embedding Service: Running on http://0.0.0.0:$EMBEDDING_PORT${NC}"
     echo -e "   📊 Health check: curl http://127.0.0.1:$EMBEDDING_PORT/health"
-    echo -e "   📋 Logs: tail -f embedding_service.log"
+    echo -e "   📋 Logs: tail -f logs/embedding_service.log"
 else
     echo -e "${RED}❌ Embedding Service: Failed to start${NC}"
 fi
@@ -211,7 +229,7 @@ fi
 if [ $RERANKER_STARTED -eq 0 ]; then
     echo -e "${GREEN}✅ Reranker Service: Running on http://0.0.0.0:$RERANKER_PORT${NC}"
     echo -e "   📊 Health check: curl http://127.0.0.1:$RERANKER_PORT/health"
-    echo -e "   📋 Logs: tail -f reranker_service.log"
+    echo -e "   📋 Logs: tail -f logs/reranker_service.log"
 else
     echo -e "${RED}❌ Reranker Service: Failed to start${NC}"
 fi
