@@ -30,7 +30,7 @@ class ChromaDBPool:
         self.min_connections = min_connections
         
         # Парсим CHROMADB_URL или используем отдельные переменные
-        chromadb_url = os.getenv('CHROMADB_URL', 'http://localhost:8000')
+        chromadb_url = os.getenv('CHROMADB_URL', 'http://chromadb:8000')  # Изменили default
         if chromadb_url.startswith('http://'):
             # Парсим URL вида http://chromadb:8000
             url_parts = chromadb_url.replace('http://', '').split(':')
