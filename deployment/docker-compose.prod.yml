@@ -88,6 +88,7 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://kb_user:${POSTGRES_PASSWORD}@postgres:5432/knowledge_base
       - CHROMADB_URL=http://chromadb:8000
       - CHROMA_HOST=chromadb
