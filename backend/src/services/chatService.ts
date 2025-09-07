@@ -64,11 +64,31 @@ interface PerformanceMetrics {
 
 export class ChatService {
   private celeryUrl: string;
-  private ollamaUrl: string;
+  private llmUrl: string;
+  private llmApiType: string;
+  private llmModelName: string;
+  private maxTokens: number;
+  private maxContextLength: number;
+  private maxChunksPerDocument: number;
 
   constructor() {
     this.celeryUrl = process.env.CELERY_URL || 'http://localhost:8001';
-    this.ollamaUrl = process.env.OLLAMA_HOST || 'http://localhost:11434';
+    this.llmUrl = process.env.VLLM_HOST || process.env.OLLAMA_HOST || 'http://localhost:8000';
+    this.llmApiType = process.env.LLM_API_TYPE || 'vllm'; // 'vllm' или 'ollama'
+    this.llmModelName = process.env.LLM_MODEL_NAME || 'openai/gpt-oss-20b';
+    
+    // Адаптивные настройки в зависимости от модели и железа
+    if (this.llmModelName.includes('gpt-oss-20b') && this.llmApiType === 'vllm') {
+      // Сервер с A100 - мощная модель 20B параметров
+      this.maxTokens = 2048;
+      this.maxContextLength = 16000; // Больше контекста для A100
+      this.maxChunksPerDocument = 5; // Больше чанков
+    } else {
+      // Локальная разработка - более скромные настройки
+      this.maxTokens = 1024;
+      this.maxContextLength = 8000;
+      this.maxChunksPerDocument = 3;
+    }
   }
 
   /**
@@ -1035,26 +1055,46 @@ export class ChatService {
         promptPreview: cleanPrompt.substring(0, 800) + '...'
       });
 
-        const response = await axios.post<{ response: string }>(
-          `${this.ollamaUrl}/api/generate`,
+      let response: any;
+      let answer: string;
+
+      if (this.llmApiType === 'vllm') {
+        // VLLM API с адаптивными настройками
+        response = await axios.post(
+          `${this.llmUrl}/v1/completions`,
           {
-            model: 'gpt-oss-rag-optimized',
+            model: this.llmModelName,
+            prompt: cleanPrompt,
+            max_tokens: this.maxTokens,
+            temperature: 0.1,
+            top_p: 0.95,
+            stream: false
+          },
+          { timeout: 60000 }
+        );
+        answer = response.data.choices?.[0]?.text?.trim();
+      } else {
+        // Ollama API с адаптивными настройками
+        response = await axios.post<{ response: string }>(
+          `${this.llmUrl}/api/generate`,
+          {
+            model: this.llmModelName,
             prompt: cleanPrompt,
             stream: false,
             options: {
-              temperature: 0.1, // ИСПРАВЛЕНИЕ: Снижаем температуру для детерминированности
+              temperature: 0.1,
               top_p: 0.95,
               top_k: 40,
               repeat_penalty: 1.15,
-              num_predict: 1024,
+              num_predict: this.maxTokens,
               num_batch: 512,
               num_thread: 10
             }
           },
           { timeout: 60000 }
         );
-
-      const answer = response.data.response?.trim();
+        answer = response.data.response?.trim();
+      }
       const tokensOut = this.estimateTokenCount(answer || '');
       const timeToFirstToken = Date.now() - startTime; // Для non-streaming это общее время
 
@@ -1129,22 +1169,37 @@ export class ChatService {
         const tokensIn = this.estimateTokenCount(cleanPrompt);
         let isFirstToken = true;
         
-        axios.post(
-          `${this.ollamaUrl}/api/generate`,
-          {
-            model: 'gpt-oss-rag-optimized',
-            prompt: cleanPrompt,
-            stream: true,
-            options: {
-              temperature: 0.1, // ИСПРАВЛЕНИЕ: Снижаем температуру для детерминированности
+        const streamUrl = this.llmApiType === 'vllm' 
+          ? `${this.llmUrl}/v1/completions`
+          : `${this.llmUrl}/api/generate`;
+          
+        const streamPayload = this.llmApiType === 'vllm' 
+          ? {
+              model: this.llmModelName,
+              prompt: cleanPrompt,
+              max_tokens: this.maxTokens,
+              temperature: 0.1,
               top_p: 0.95,
-              top_k: 40,
-              repeat_penalty: 1.15,
-              num_predict: 1024,
-              num_batch: 512,
-              num_thread: 10
+              stream: true
             }
-          },
+          : {
+              model: this.llmModelName,
+              prompt: cleanPrompt,
+              stream: true,
+              options: {
+                temperature: 0.1,
+                top_p: 0.95,
+                top_k: 40,
+                repeat_penalty: 1.15,
+                num_predict: this.maxTokens,
+                num_batch: 512,
+                num_thread: 10
+              }
+            };
+
+        axios.post(
+          streamUrl,
+          streamPayload,
           {
             timeout: 120000,
             responseType: 'stream'
@@ -1826,9 +1881,9 @@ ATTENDEES: [email1],[email2]"
   private selectOptimalChunks(chunks: any[], query: string): any[] {
     if (!chunks || chunks.length === 0) return [];
     
-    // КРИТИЧНО: АДАПТИВНЫЕ пороги в зависимости от разброса скоров
-    const MAX_CONTEXT_LENGTH = 8000;
-    const MAX_CHUNKS_PER_DOCUMENT = 3; // УМЕНЬШЕНО до 3 чанков на документ
+    // КРИТИЧНО: АДАПТИВНЫЕ пороги в зависимости от модели и железа
+    const MAX_CONTEXT_LENGTH = this.maxContextLength;
+    const MAX_CHUNKS_PER_DOCUMENT = this.maxChunksPerDocument;
     
     // Сортируем по релевантности
     const sortedChunks = chunks.sort((a, b) => (b.rerank_score || 0) - (a.rerank_score || 0));
@@ -1944,7 +1999,7 @@ ATTENDEES: [email1],[email2]"
       });
 
       const response = await axios.post<{ response: string }>(
-        `${this.ollamaUrl}/api/generate`,
+        `${this.llmUrl}/api/generate`,
         {
           model: 'qwen-rag-optimized',
           prompt: prompt,
@@ -2238,7 +2293,7 @@ ATTENDEES: [email1],[email2]"
 - Создай поисковые запросы для каждого участника`;
 
       const response = await axios.post<{ response: string }>(
-        `${this.ollamaUrl}/api/generate`,
+        `${this.llmUrl}/api/generate`,
         {
           model: 'qwen-rag-optimized',
           prompt: prompt,
@@ -2449,7 +2504,7 @@ ${calendarDebug ? JSON.stringify(calendarDebug, null, 2) : 'Нет отладо�
 Ответь ТОЛЬКО email адресом или "НЕТ" если не найден.`;
 
       const response = await axios.post<{ response: string }>(
-        `${this.ollamaUrl}/api/generate`,
+        `${this.llmUrl}/api/generate`,
         {
           model: 'qwen-rag-optimized',
           prompt: prompt,
