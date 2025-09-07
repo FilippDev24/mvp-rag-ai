@@ -108,7 +108,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ../worker/uploads:/app/uploads
+      - ../backend/uploads:/app/uploads
 
   frontend:
     build:
