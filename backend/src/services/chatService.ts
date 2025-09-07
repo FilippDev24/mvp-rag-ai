@@ -73,9 +73,17 @@ export class ChatService {
 
   constructor() {
     this.celeryUrl = process.env.CELERY_URL || 'http://localhost:8001';
-    this.llmUrl = process.env.VLLM_HOST || process.env.OLLAMA_HOST || 'http://localhost:8000';
-    this.llmApiType = process.env.LLM_API_TYPE || 'vllm'; // 'vllm' или 'ollama'
-    this.llmModelName = process.env.LLM_MODEL_NAME || 'openai/gpt-oss-20b';
+    
+    // Определяем URL и тип API на основе переменных окружения
+    if (process.env.LLM_API_TYPE === 'vllm' || process.env.VLLM_HOST) {
+      this.llmUrl = process.env.VLLM_HOST || 'http://localhost:8000';
+      this.llmApiType = 'vllm';
+      this.llmModelName = process.env.LLM_MODEL_NAME || 'openai/gpt-oss-20b';
+    } else {
+      this.llmUrl = process.env.OLLAMA_HOST || 'http://localhost:11434';
+      this.llmApiType = 'ollama';
+      this.llmModelName = process.env.LLM_MODEL_NAME || 'qwen-rag-optimized';
+    }
     
     // Адаптивные настройки в зависимости от модели и железа
     if (this.llmModelName.includes('gpt-oss-20b') && this.llmApiType === 'vllm') {
