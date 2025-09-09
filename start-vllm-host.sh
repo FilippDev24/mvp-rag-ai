@@ -135,12 +135,17 @@ echo ""
 # Запуск vLLM
 echo -e "${BLUE}🚀 Starting vLLM server...${NC}"
 
-# Команда запуска
-VLLM_CMD="vllm serve $MODEL_NAME \
+# Установка переменных окружения для HuggingFace кэша
+export HF_HOME="/opt/llm-cache"
+export TRANSFORMERS_CACHE="/opt/llm-cache"
+export HF_HUB_CACHE="/opt/llm-cache/hub"
+
+# Команда запуска с правильным путем к модели
+VLLM_CMD="vllm serve /opt/llm-cache/models--openai--gpt-oss-20b \
     --host $HOST \
     --port $PORT \
     --dtype $DTYPE \
-    --max-model-len $MAX_MODEL_LEN \
+    --max-model-len 32768 \
     --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
     --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
     --disable-log-requests \
