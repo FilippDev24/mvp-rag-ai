@@ -15,14 +15,16 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}🚀 Starting vLLM Host Service for gpt-oss-20b${NC}"
 echo "=============================================="
 
-# Параметры по умолчанию
+# Параметры по умолчанию (МАКСИМАЛЬНО ОПТИМИЗИРОВАННЫЕ для A100)
 MODEL_NAME="openai/gpt-oss-20b"
 HOST="0.0.0.0"
 PORT="8000"
 DTYPE="bfloat16"
-MAX_MODEL_LEN="8192"
-GPU_MEMORY_UTILIZATION="0.9"
+MAX_MODEL_LEN="16384"
+GPU_MEMORY_UTILIZATION="0.90"
 TENSOR_PARALLEL_SIZE="1"
+BLOCK_SIZE="16"
+SWAP_SPACE="4"
 
 # Парсинг аргументов
 while [[ $# -gt 0 ]]; do
@@ -55,6 +57,14 @@ while [[ $# -gt 0 ]]; do
             TENSOR_PARALLEL_SIZE="$2"
             shift 2
             ;;
+        --block-size)
+            BLOCK_SIZE="$2"
+            shift 2
+            ;;
+        --swap-space)
+            SWAP_SPACE="$2"
+            shift 2
+            ;;
         --help|-h)
             echo -e "${BLUE}Usage: $0 [OPTIONS]${NC}"
             echo ""
@@ -63,9 +73,11 @@ while [[ $# -gt 0 ]]; do
             echo "  --port PORT             Port to bind (default: 8000)"
             echo "  --host HOST             Host to bind (default: 0.0.0.0)"
             echo "  --dtype DTYPE           Data type (default: bfloat16)"
-            echo "  --max-len LENGTH        Max model length (default: 8192)"
-            echo "  --gpu-memory RATIO      GPU memory utilization (default: 0.9)"
+            echo "  --max-len LENGTH        Max model length (default: 16384)"
+            echo "  --gpu-memory RATIO      GPU memory utilization (default: 0.90)"
             echo "  --tensor-parallel SIZE  Tensor parallel size (default: 1)"
+            echo "  --block-size SIZE       Block size for attention (default: 16)"
+            echo "  --swap-space GB         CPU swap space in GB (default: 4)"
             echo "  --help, -h              Show this help"
             exit 0
             ;;
@@ -130,6 +142,8 @@ echo "  Data Type: $DTYPE"
 echo "  Max Model Length: $MAX_MODEL_LEN"
 echo "  GPU Memory Utilization: $GPU_MEMORY_UTILIZATION"
 echo "  Tensor Parallel Size: $TENSOR_PARALLEL_SIZE"
+echo "  Block Size: $BLOCK_SIZE"
+echo "  Swap Space: ${SWAP_SPACE}GB"
 echo ""
 
 # Запуск vLLM
@@ -140,15 +154,25 @@ export HF_HOME="/opt/llm-cache"
 export TRANSFORMERS_CACHE="/opt/llm-cache"
 export HF_HUB_CACHE="/opt/llm-cache/hub"
 
-# Команда запуска с правильным путем к модели
+# Команда запуска с МАКСИМАЛЬНО ОПТИМИЗИРОВАННЫМИ параметрами для производительности
 VLLM_CMD="vllm serve /opt/llm-cache/models--openai--gpt-oss-20b/snapshots/6cee5e81ee83917806bbde320786a8fb61efebee \
     --host $HOST \
     --port $PORT \
     --dtype $DTYPE \
-    --max-model-len 32768 \
+    --max-model-len $MAX_MODEL_LEN \
     --gpu-memory-utilization $GPU_MEMORY_UTILIZATION \
     --tensor-parallel-size $TENSOR_PARALLEL_SIZE \
+    --block-size $BLOCK_SIZE \
+    --swap-space $SWAP_SPACE \
+    --max-num-batched-tokens 8192 \
+    --max-num-seqs 32 \
+    --max-paddings 512 \
+    --enable-prefix-caching \
+    --enable-chunked-prefill \
+    --max-num-on-the-fly-seq-groups 8 \
+    --preemption-mode recompute \
     --disable-log-requests \
+    --disable-log-stats \
     --trust-remote-code"
 
 echo -e "${YELLOW}Command: $VLLM_CMD${NC}"
@@ -218,7 +242,7 @@ echo "  • Log file: $LOG_FILE"
 echo ""
 
 # Полезные команды
-echo -e "${BLUE}🛠️  Useful Commands:${NC}"
+echo -e "${BLUE}�️  Useful Commands:${NC}"
 echo "  • View logs: tail -f $LOG_FILE"
 echo "  • Check status: curl http://$HOST:$PORT/v1/models"
 echo "  • Stop service: kill $VLLM_PID"
@@ -247,6 +271,8 @@ DTYPE=$DTYPE
 MAX_MODEL_LEN=$MAX_MODEL_LEN
 GPU_MEMORY_UTILIZATION=$GPU_MEMORY_UTILIZATION
 TENSOR_PARALLEL_SIZE=$TENSOR_PARALLEL_SIZE
+BLOCK_SIZE=$BLOCK_SIZE
+SWAP_SPACE=$SWAP_SPACE
 PID=$VLLM_PID
 STARTED_AT=$(date)
 LOG_FILE=$LOG_FILE
