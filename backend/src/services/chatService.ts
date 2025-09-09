@@ -2099,7 +2099,7 @@ ATTENDEES: [email1],[email2]"
                 content: prompt
               }
             ],
-            max_tokens: 100,
+            max_tokens: 200,
             temperature: 0.0,
             top_p: 0.1,
             stream: false
