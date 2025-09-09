@@ -107,10 +107,10 @@ echo -e "${BLUE}🔍 Checking ports availability...${NC}"
 EMBEDDING_PORT=8003
 RERANKER_PORT=8002
 
-check_port $EMBEDDING_PORT "Embedding Service"
+check_port $EMBEDDING_PORT "Embedding Service" || true
 EMBEDDING_PORT_AVAILABLE=$?
 
-check_port $RERANKER_PORT "Reranker Service"
+check_port $RERANKER_PORT "Reranker Service" || true
 RERANKER_PORT_AVAILABLE=$?
 
 # Если хотя бы один сервис уже запущен, пропускаем весь запуск ML сервисов
