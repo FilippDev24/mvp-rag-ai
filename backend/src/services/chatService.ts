@@ -1068,12 +1068,17 @@ export class ChatService {
       let answer: string;
 
       if (this.llmApiType === 'vllm') {
-        // VLLM API с адаптивными настройками
+        // VLLM API с новым Chat Completions endpoint
         response = await axios.post(
-          `${this.llmUrl}/v1/completions`,
+          `${this.llmUrl}/v1/chat/completions`,
           {
             model: this.llmModelName,
-            prompt: cleanPrompt,
+            messages: [
+              {
+                role: "user",
+                content: cleanPrompt
+              }
+            ],
             max_tokens: this.maxTokens,
             temperature: 0.1,
             top_p: 0.95,
@@ -1081,7 +1086,7 @@ export class ChatService {
           },
           { timeout: 60000 }
         );
-        answer = response.data.choices?.[0]?.text?.trim();
+        answer = response.data.choices?.[0]?.message?.content?.trim();
       } else {
         // Ollama API с адаптивными настройками
         response = await axios.post<{ response: string }>(
