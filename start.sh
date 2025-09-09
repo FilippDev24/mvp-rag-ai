@@ -328,13 +328,10 @@ if [ $SKIP_ML_SERVICES = false ]; then
                 --swap-space 4 \
                 --max-num-batched-tokens 8192 \
                 --max-num-seqs 32 \
-                --max-paddings 512 \
                 --enable-prefix-caching \
                 --enable-chunked-prefill \
-                --max-num-on-the-fly-seq-groups 8 \
                 --preemption-mode recompute \
                 --disable-log-requests \
-                --disable-log-stats \
                 --trust-remote-code
             
             log_success "vLLM Docker container started"
