@@ -141,7 +141,7 @@ export TRANSFORMERS_CACHE="/opt/llm-cache"
 export HF_HUB_CACHE="/opt/llm-cache/hub"
 
 # Команда запуска с правильным путем к модели
-VLLM_CMD="vllm serve /opt/llm-cache/models--openai--gpt-oss-20b \
+VLLM_CMD="vllm serve /opt/llm-cache/models--openai--gpt-oss-20b/snapshots/6cee5e81ee83917806bbde320786a8fb61efebee \
     --host $HOST \
     --port $PORT \
     --dtype $DTYPE \
