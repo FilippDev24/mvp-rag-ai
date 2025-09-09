@@ -2081,32 +2081,58 @@ ATTENDEES: [email1],[email2]"
 ОТВЕТ:`;
 
       logger.info('Classifying request with LLM', {
-        question: question.substring(0, 100)
+        question: question.substring(0, 100),
+        prompt: prompt.substring(0, 500) + '...',
+        promptLength: prompt.length,
+        apiType: this.llmApiType,
+        modelName: this.llmModelName
       });
 
       let response: any;
       let llmResponse: string;
 
       if (this.llmApiType === 'vllm') {
+        const requestPayload = {
+          model: this.llmModelName,
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          max_tokens: 200,
+          temperature: 0.0,
+          top_p: 0.1,
+          stream: false
+        };
+
+        logger.info('Sending vLLM classification request', {
+          url: `${this.llmUrl}/v1/chat/completions`,
+          payload: {
+            model: requestPayload.model,
+            messagesCount: requestPayload.messages.length,
+            messageContent: requestPayload.messages[0].content.substring(0, 300) + '...',
+            maxTokens: requestPayload.max_tokens,
+            temperature: requestPayload.temperature
+          }
+        });
+
         // vLLM API с Chat Completions endpoint
         response = await axios.post(
           `${this.llmUrl}/v1/chat/completions`,
-          {
-            model: this.llmModelName,
-            messages: [
-              {
-                role: "user",
-                content: prompt
-              }
-            ],
-            max_tokens: 200,
-            temperature: 0.0,
-            top_p: 0.1,
-            stream: false
-          },
+          requestPayload,
           { timeout: 10000 }
         );
         llmResponse = response.data.choices?.[0]?.message?.content?.trim();
+
+        logger.info('vLLM classification response received', {
+          responseStatus: response.status,
+          responseData: {
+            choices: response.data.choices?.length || 0,
+            firstChoiceContent: response.data.choices?.[0]?.message?.content?.substring(0, 200) || 'empty',
+            finishReason: response.data.choices?.[0]?.finish_reason || 'unknown'
+          }
+        });
       } else {
         // Ollama API
         response = await axios.post<{ response: string }>(
