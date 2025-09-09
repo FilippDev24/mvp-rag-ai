@@ -1184,13 +1184,18 @@ export class ChatService {
         let isFirstToken = true;
         
         const streamUrl = this.llmApiType === 'vllm' 
-          ? `${this.llmUrl}/v1/completions`
+          ? `${this.llmUrl}/v1/chat/completions`
           : `${this.llmUrl}/api/generate`;
           
         const streamPayload = this.llmApiType === 'vllm' 
           ? {
               model: this.llmModelName,
-              prompt: cleanPrompt,
+              messages: [
+                {
+                  role: "user",
+                  content: cleanPrompt
+                }
+              ],
               max_tokens: this.maxTokens,
               temperature: 0.1,
               top_p: 0.95,
@@ -1245,8 +1250,8 @@ export class ChatService {
                       const jsonData = line.substring(6);
                       const data = JSON.parse(jsonData);
                       
-                      if (data.choices && data.choices[0] && data.choices[0].text) {
-                        const chunk = data.choices[0].text;
+                      if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+                        const chunk = data.choices[0].delta.content;
                         fullAnswer += chunk;
                         
                         const cleanedChunk = this.cleanStreamingChunk(chunk);
