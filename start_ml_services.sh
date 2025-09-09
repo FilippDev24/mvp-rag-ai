@@ -113,6 +113,15 @@ EMBEDDING_PORT_AVAILABLE=$?
 check_port $RERANKER_PORT "Reranker Service"
 RERANKER_PORT_AVAILABLE=$?
 
+# Если оба сервиса уже запущены, пропускаем их запуск
+if [ $EMBEDDING_PORT_AVAILABLE -ne 0 ] && [ $RERANKER_PORT_AVAILABLE -ne 0 ]; then
+    echo -e "${GREEN}✅ Both ML services are already running, skipping startup${NC}"
+    echo -e "${BLUE}🎯 ML Services Status:${NC}"
+    echo -e "${GREEN}✅ Embedding Service: Already running on port $EMBEDDING_PORT${NC}"
+    echo -e "${GREEN}✅ Reranker Service: Already running on port $RERANKER_PORT${NC}"
+    exit 0
+fi
+
 # Проверка виртуальных окружений
 echo -e "${BLUE}🔍 Checking virtual environments...${NC}"
 
