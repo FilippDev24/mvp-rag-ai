@@ -1247,35 +1247,57 @@ export class ChatService {
                     }
                     
                     if (line.startsWith('data: ')) {
-                      const jsonData = line.substring(6);
-                      const data = JSON.parse(jsonData);
+                      const jsonData = line.substring(6).trim();
                       
-                      if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
-                        const chunk = data.choices[0].delta.content;
-                        fullAnswer += chunk;
-                        
-                        const cleanedChunk = this.cleanStreamingChunk(chunk);
-                        
-                        if (onChunk) {
-                          onChunk(cleanedChunk, isFirstToken);
-                          isFirstToken = false;
-                        }
-                        
-                        if (cleanedChunk) {
-                          this.sendSSEData(res, 'answer', {
-                            text: cleanedChunk,
-                            done: false
-                          });
-                        }
+                      // ИСПРАВЛЕНИЕ: Пропускаем пустые строки и [DONE]
+                      if (!jsonData || jsonData === '[DONE]') {
+                        continue;
                       }
                       
-                      if (data.choices && data.choices[0] && data.choices[0].finish_reason) {
-                        this.sendSSEData(res, 'answer', {
-                          text: '',
-                          done: true
+                      try {
+                        const data = JSON.parse(jsonData);
+                        
+                        // ИСПРАВЛЕНИЕ: Более надежная проверка структуры данных
+                        if (data.choices && Array.isArray(data.choices) && data.choices.length > 0) {
+                          const choice = data.choices[0];
+                          
+                          // Проверяем наличие контента в delta
+                          if (choice.delta && choice.delta.content) {
+                            const chunk = choice.delta.content;
+                            fullAnswer += chunk;
+                            
+                            const cleanedChunk = this.cleanStreamingChunk(chunk);
+                            
+                            if (onChunk) {
+                              onChunk(cleanedChunk, isFirstToken);
+                              isFirstToken = false;
+                            }
+                            
+                            if (cleanedChunk) {
+                              this.sendSSEData(res, 'answer', {
+                                text: cleanedChunk,
+                                done: false
+                              });
+                            }
+                          }
+                          
+                          // ИСПРАВЛЕНИЕ: Проверяем завершение более надежно
+                          if (choice.finish_reason && choice.finish_reason !== null) {
+                            this.sendSSEData(res, 'answer', {
+                              text: '',
+                              done: true
+                            });
+                            resolve(fullAnswer);
+                            return;
+                          }
+                        }
+                      } catch (vllmParseError) {
+                        logger.warn('Failed to parse VLLM stream data', { 
+                          jsonData: jsonData.substring(0, 200),
+                          parseError: vllmParseError,
+                          line: line.substring(0, 200)
                         });
-                        resolve(fullAnswer);
-                        return;
+                        continue;
                       }
                     }
                   } else {
@@ -2165,43 +2187,46 @@ ATTENDEES: [email1],[email2]"
   private sendSSEData(res: Response, event: string, data: any): void {
     try {
       // КРИТИЧНО: Проверяем состояние соединения ПЕРЕД каждой отправкой
-      if (res.destroyed) {
-        logger.warn('Cannot send SSE event - response destroyed', { 
+      if (res.destroyed || res.closed) {
+        logger.warn('Cannot send SSE event - response destroyed or closed', { 
           event, 
-          destroyed: res.destroyed
+          destroyed: res.destroyed,
+          closed: res.closed
         });
         return;
       }
 
-      if (res.headersSent) {
-        logger.warn('Headers already sent, checking if connection is still writable', { 
+      // ИСПРАВЛЕНИЕ: Проверяем writable ПЕРЕД проверкой headersSent
+      if (!res.writable) {
+        logger.warn('Cannot send SSE event - connection not writable', { 
+          event,
+          writable: res.writable,
+          headersSent: res.headersSent
+        });
+        return;
+      }
+
+      // ИСПРАВЛЕНИЕ: Убираем избыточные логи для предотвращения спама
+      if (res.headersSent && event === 'answer') {
+        // Для answer событий не логируем каждый раз
+      } else {
+        logger.debug('Sending SSE event', { 
           event, 
+          dataSize: JSON.stringify(data).length,
           headersSent: res.headersSent,
           writable: res.writable
         });
-        
-        // Если headers уже отправлены, но соединение еще записываемо
-        if (!res.writable) {
-          logger.warn('Cannot send SSE event - connection not writable', { event });
-          return;
-        }
       }
-
-      logger.debug('Sending SSE event', { 
-        event, 
-        dataSize: JSON.stringify(data).length
-      });
       
       res.write(`event: ${event}\n`);
       res.write(`data: ${JSON.stringify(data)}\n\n`);
-      
-      logger.debug('SSE event sent successfully', { event });
       
     } catch (error) {
       logger.error('Error sending SSE data', { 
         error: error instanceof Error ? error.message : 'Unknown error', 
         event,
         destroyed: res.destroyed,
+        closed: res.closed,
         headersSent: res.headersSent,
         writable: res.writable
       });
