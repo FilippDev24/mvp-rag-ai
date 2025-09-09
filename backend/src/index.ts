@@ -62,6 +62,9 @@ app.use(cors({
     process.env.FRONTEND_URL || 'http://localhost:3000',
     'http://localhost:3020',
     'http://localhost:8015',
+    'http://127.0.0.1:8015',
+    'http://localhost:8014',
+    'http://127.0.0.1:8014',
     'http://89.169.150.113:3000'
   ],
   credentials: true,

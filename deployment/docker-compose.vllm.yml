@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  # vLLM сервис для gpt-oss-20b модели
+  vllm:
+    build:
+      context: ..
+      dockerfile: Dockerfile.vllm-cu122
+    container_name: kb_vllm_prod
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      - VLLM_LOGGING_LEVEL=INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - vllm_models:/models
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  postgres:
+    image: postgres:15
+    container_name: kb_postgres_prod
+    environment:
+      POSTGRES_DB: knowledge_base
+      POSTGRES_USER: kb_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kb_user -d knowledge_base"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: kb_redis_prod
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: kb_chromadb_prod
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+    ports:
+      - "8012:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: kb_backend_prod
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://kb_user:${POSTGRES_PASSWORD}@postgres:5432/knowledge_base
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CHROMADB_URL=http://chromadb:8000
+      - LOCAL_EMBEDDING_URL=http://172.17.0.1:8003
+      - LOCAL_RERANKER_URL=http://172.17.0.1:8002
+      - VLLM_HOST=http://vllm:8000
+      - LLM_API_TYPE=vllm
+      - LLM_MODEL_NAME=openai/gpt-oss-20b
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      vllm:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ../backend/uploads:/app/uploads
+      - ../backend/logs:/app/logs
+
+  worker:
+    build:
+      context: ../worker
+      dockerfile: Dockerfile
+    container_name: kb_worker_prod
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://kb_user:${POSTGRES_PASSWORD}@postgres:5432/knowledge_base
+      - CHROMADB_URL=http://chromadb:8000
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - LOCAL_EMBEDDING_URL=http://172.17.0.1:8003
+      - LOCAL_RERANKER_URL=http://172.17.0.1:8002
+      - VLLM_HOST=http://vllm:8000
+      - LLM_API_TYPE=vllm
+      - LLM_MODEL_NAME=openai/gpt-oss-20b
+      - PYTHONPATH=/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+      vllm:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ../backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: kb_frontend_prod
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  chromadb_data:
+  vllm_models:
+
+networks:
+  default:
+    name: kb_network_prod

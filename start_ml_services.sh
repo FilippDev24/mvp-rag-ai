@@ -169,7 +169,7 @@ start_service() {
     
     # Полные пути к файлам
     local full_log_path="logs/$log_file"
-    local pid_file="logs/${service_name,,}_service.pid"
+    local pid_file="logs/$(echo $service_name | tr '[:upper:]' '[:lower:]')_service.pid"
     
     # Активируем виртуальное окружение и запускаем сервис
     (
@@ -178,19 +178,39 @@ start_service() {
         echo $! > "$pid_file"
     )
     
-    # Ждем немного для инициализации
-    sleep 5
+    # Ждем инициализации и загрузки модели
+    echo -e "${BLUE}⏳ Waiting for $service_name to initialize (loading model...)${NC}"
+    local max_attempts=60  # 5 минут на загрузку модели
+    local attempt=1
     
-    # Проверяем, что сервис запустился
-    if check_port $port "$service_name" >/dev/null 2>&1; then
+    while [ $attempt -le $max_attempts ]; do
+        # Проверяем, что процесс еще жив
+        local pid=$(cat "$pid_file" 2>/dev/null || echo "")
+        if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
+            echo -e "${RED}❌ $service_name process died during startup${NC}"
+            echo -e "${BLUE}📋 Check logs: $log_file${NC}"
+            return 1
+        fi
+        
+        # Проверяем, что порт открыт
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1 || netstat -tuln | grep ":$port " >/dev/null 2>&1; then
             echo -e "${GREEN}✅ $service_name started successfully on port $port${NC}"
             echo -e "${BLUE}📋 Logs: $log_file${NC}"
             return 0
         fi
-    fi
+        
+        # Показываем прогресс
+        if [ $((attempt % 10)) -eq 0 ]; then
+            echo -e "${YELLOW}⏳ Still loading model... ($attempt/${max_attempts})${NC}"
+        else
+            echo -n "."
+        fi
+        
+        sleep 5
+        attempt=$((attempt + 1))
+    done
     
-    echo -e "${RED}❌ Failed to start $service_name${NC}"
+    echo -e "${RED}❌ $service_name failed to start within $((max_attempts * 5)) seconds${NC}"
     echo -e "${BLUE}📋 Check logs: $log_file${NC}"
     return 1
 }
