@@ -310,7 +310,7 @@ if [ $SKIP_ML_SERVICES = false ]; then
             docker stop vllm-gptoss 2>/dev/null || true
             docker rm vllm-gptoss 2>/dev/null || true
             
-            # Запускаем vLLM контейнер с полным путем к модели
+            # Запускаем vLLM контейнер с ОПТИМИЗИРОВАННЫМИ параметрами
             docker run -d --gpus all \
                 --name vllm-gptoss \
                 -p 8000:8000 \
@@ -320,8 +320,22 @@ if [ $SKIP_ML_SERVICES = false ]; then
                 -e HF_HUB_OFFLINE=1 \
                 vllm/vllm-openai:gptoss \
                 --model /root/.cache/huggingface/models--openai--gpt-oss-20b/snapshots/6cee5e81ee83917806bbde320786a8fb61efebee \
-                --max-model-len 32768 \
-                --gpu-memory-utilization 0.9
+                --dtype bfloat16 \
+                --max-model-len 16384 \
+                --gpu-memory-utilization 0.90 \
+                --tensor-parallel-size 1 \
+                --block-size 16 \
+                --swap-space 4 \
+                --max-num-batched-tokens 8192 \
+                --max-num-seqs 32 \
+                --max-paddings 512 \
+                --enable-prefix-caching \
+                --enable-chunked-prefill \
+                --max-num-on-the-fly-seq-groups 8 \
+                --preemption-mode recompute \
+                --disable-log-requests \
+                --disable-log-stats \
+                --trust-remote-code
             
             log_success "vLLM Docker container started"
             
