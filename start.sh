@@ -310,7 +310,7 @@ if [ $SKIP_ML_SERVICES = false ]; then
             docker stop vllm-gptoss 2>/dev/null || true
             docker rm vllm-gptoss 2>/dev/null || true
             
-            # Запускаем vLLM контейнер с ОПТИМИЗИРОВАННЫМИ параметрами
+            # Запускаем vLLM контейнер с ИСПРАВЛЕННЫМИ оптимизированными параметрами
             docker run -d --gpus all \
                 --name vllm-gptoss \
                 -p 8000:8000 \
@@ -328,10 +328,9 @@ if [ $SKIP_ML_SERVICES = false ]; then
                 --swap-space 4 \
                 --max-num-batched-tokens 8192 \
                 --max-num-seqs 32 \
+                --disable-sliding-window \
                 --enable-prefix-caching \
                 --enable-chunked-prefill \
-                --preemption-mode recompute \
-                --disable-log-requests \
                 --trust-remote-code
             
             log_success "vLLM Docker container started"
