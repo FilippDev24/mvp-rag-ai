@@ -2084,24 +2084,49 @@ ATTENDEES: [email1],[email2]"
         question: question.substring(0, 100)
       });
 
-      const response = await axios.post<{ response: string }>(
-        `${this.llmUrl}/api/generate`,
-        {
-          model: 'qwen-rag-optimized',
-          prompt: prompt,
-          stream: false,
-          options: {
-            temperature: 0.0, // СТРОГО детерминированно
-            top_p: 0.1,
-            top_k: 1,
-            num_predict: 100,
-            stop: ['\n', '\n\n']
-          }
-        },
-        { timeout: 10000 }
-      );
+      let response: any;
+      let llmResponse: string;
 
-      const llmResponse = response.data.response?.trim();
+      if (this.llmApiType === 'vllm') {
+        // vLLM API с Chat Completions endpoint
+        response = await axios.post(
+          `${this.llmUrl}/v1/chat/completions`,
+          {
+            model: this.llmModelName,
+            messages: [
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            max_tokens: 100,
+            temperature: 0.0,
+            top_p: 0.1,
+            stream: false
+          },
+          { timeout: 10000 }
+        );
+        llmResponse = response.data.choices?.[0]?.message?.content?.trim();
+      } else {
+        // Ollama API
+        response = await axios.post<{ response: string }>(
+          `${this.llmUrl}/api/generate`,
+          {
+            model: 'qwen-rag-optimized',
+            prompt: prompt,
+            stream: false,
+            options: {
+              temperature: 0.0,
+              top_p: 0.1,
+              top_k: 1,
+              num_predict: 100,
+              stop: ['\n', '\n\n']
+            }
+          },
+          { timeout: 10000 }
+        );
+        llmResponse = response.data.response?.trim();
+      }
       
       logger.info('LLM classification raw response', {
         question: question.substring(0, 100),
