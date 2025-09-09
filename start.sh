@@ -302,6 +302,33 @@ if [ $SKIP_ML_SERVICES = false ]; then
             wait_for_service "http://127.0.0.1:8002/health" "Reranker Service" 15
         fi
         
+        # Запуск vLLM через Docker в продакшн режиме
+        if [ $ENVIRONMENT = "production" ]; then
+            log_step "Starting vLLM via Docker..."
+            
+            # Останавливаем существующий контейнер если есть
+            docker stop vllm-gptoss 2>/dev/null || true
+            docker rm vllm-gptoss 2>/dev/null || true
+            
+            # Запускаем vLLM контейнер
+            docker run -d --gpus all \
+                --name vllm-gptoss \
+                -p 8000:8000 \
+                --ipc=host \
+                -v /opt/llm-cache:/root/.cache/huggingface \
+                -e VLLM_ATTENTION_BACKEND=TRITON_ATTN_VLLM_V1 \
+                -e HF_HUB_OFFLINE=1 \
+                vllm/vllm-openai:gptoss \
+                --model openai/gpt-oss-20b \
+                --max-model-len 32768 \
+                --gpu-memory-utilization 0.9
+            
+            log_success "vLLM Docker container started"
+            
+            # Ждем готовности vLLM
+            wait_for_service "http://127.0.0.1:8000/v1/models" "vLLM" 60
+        fi
+        
     else
         log_warning "start_ml_services.sh not found, skipping ML services"
     fi
